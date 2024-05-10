@@ -1,5 +1,6 @@
 import asyncio
 import logging
+import os
 from os import listdir
 from os.path import isfile, join, exists
 
@@ -73,7 +74,7 @@ class Musik(commands.Cog):
     async def spielen(self, ctx, *, query):
         """Eine Musikdatei aus dem lokalen Dateisystem abspielen"""
         try:
-            path = config.get_music_path() + "\\" + query
+            path = config.get_music_path() + os.path.sep + query
             if exists(path):
                 source = discord.PCMVolumeTransformer(discord.FFmpegPCMAudio(path))
                 ctx.voice_client.play(source)
