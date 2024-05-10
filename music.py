@@ -8,7 +8,7 @@ import discord
 import youtube_dl
 from discord.ext import commands
 
-from main import config
+from config import config
 
 music_extensions = ['.mp3', '.wav', '.ogg', '.flac', '.m4a', '.opus', '.wma', '.ac3', '.eac3', '.mp4', '.mkv', '.avi', '.mov', '.flv', '.webm', '.mpg', '.mpeg', '.ts', '.m2ts', '.wmv']
 

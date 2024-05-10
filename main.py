@@ -7,10 +7,9 @@ import discord
 from aioconsole import ainput
 from discord.ext import commands
 
-from config import Config
+from config import config
 
 logging.basicConfig(format='[%(asctime)s][%(levelname)s] %(message)s', filename='bot.log', encoding='utf-8', level=logging.INFO)
-config = Config()
 bot = commands.Bot(command_prefix=commands.when_mentioned_or(config.get_command_prefix()), intents=discord.Intents.all())
 
 

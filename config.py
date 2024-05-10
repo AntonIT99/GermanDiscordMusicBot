@@ -32,3 +32,6 @@ class Config:
     def get_welcome_channel(self):
         self.__read()
         return self.cp.get('Settings', 'welcome_channel')
+
+
+config = Config()
