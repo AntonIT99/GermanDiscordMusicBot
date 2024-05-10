@@ -1,0 +1,11 @@
+[Settings]
+token = abcdefg
+command_prefix = +
+music_path = /home/user/Music
+welcome_channel = eingangshalle
+
+[Language]
+greetings_using = Hallo, Servus, Grüß Gott, Sei gegrüßt, Moin
+greetings_understanding = Hallo, Hi, Servus, Grüß Gott, Hey, Heyho, Guten Tag, Guten Abend, Guten Morgen, Moin, Bonjour, Hello, Hola, Grüezi, Grüß, Sei gegrüßt, Gude
+farewell_using = Tschüß, Auf Wiedersehen, Bis dann
+farewell_understanding = Tschüß, Auf Wiedersehen, Bis zum nächsten Mal, Bis dann, Wiedersehen, Ade, Adieu, Ciao, Ahoi, Lebwohl, Tschüssi, Tschüßi, Mach’s gut, Bye, Bis bald, Tschüss
