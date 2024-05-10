@@ -1,3 +1,4 @@
 aioconsole
 discord
+PyNaCl
 youtube-dl

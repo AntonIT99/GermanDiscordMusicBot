@@ -10,6 +10,8 @@ from discord.ext import commands
 
 from main import config
 
+music_extensions = ['.mp3', '.wav', '.ogg', '.flac', '.m4a', '.opus', '.wma', '.ac3', '.eac3', '.mp4', '.mkv', '.avi', '.mov', '.flv', '.webm', '.mpg', '.mpeg', '.ts', '.m2ts', '.wmv']
+
 ytdl_options = {
     'format': 'bestaudio/best',
     'outtmpl': '%(extractor)s-%(id)s-%(title)s.%(ext)s',
@@ -54,7 +56,7 @@ class Musik(commands.Cog):
         Nutzung: listen [Filter]
         """
         path = config.get_music_path()
-        music_files = [f for f in listdir(path) if isfile(join(path, f)) and f != ".gitkeep"]
+        music_files = [f for f in listdir(path) if isfile(join(path, f)) and os.path.splitext(f)[1].lower() in music_extensions]
         no_results = True
         response = "Musikdateien:\n```"
         for file in music_files:
