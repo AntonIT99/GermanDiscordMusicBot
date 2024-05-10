@@ -53,7 +53,7 @@ class Musik(commands.Cog):
         Nutzung: listen [Filter]
         """
         path = config.get_music_path()
-        music_files = [f for f in listdir(path) if isfile(join(path, f))]
+        music_files = [f for f in listdir(path) if isfile(join(path, f)) and f != ".gitkeep"]
         no_results = True
         response = "Musikdateien:\n```"
         for file in music_files:
