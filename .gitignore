@@ -1,4 +1,6 @@
 !music/
+!music/.gitkeep
+music/*
 */
 *.ini
 *.log
