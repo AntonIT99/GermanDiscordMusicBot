@@ -1,4 +1,5 @@
 import configparser
+import os
 
 
 class Config:
@@ -22,7 +23,11 @@ class Config:
 
     def get_music_path(self):
         self.__read()
-        return self.cp.get('Settings', 'music_path')
+        path = self.cp.get('Settings', 'music_path')
+        if not os.path.exists(path):
+            path = os.getcwd() + os.path.sep + "music"
+            self.cp.set('Settings', 'music_path', path)
+        return path
 
     def get_welcome_channel(self):
         self.__read()
