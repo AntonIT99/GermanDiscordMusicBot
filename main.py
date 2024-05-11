@@ -9,16 +9,16 @@ from aioconsole import ainput
 from discord.ext import commands
 
 from config import config
+from helper import print_and_log
 
-rfh = RotatingFileHandler(filename='bot.log', mode='a', maxBytes=10*1024*1024, backupCount=2, encoding='utf-8', delay=0)
+rfh = RotatingFileHandler(filename='bot.log', mode='a', maxBytes=1024*1024, backupCount=2, encoding='utf-8', delay=0)
 logging.basicConfig(format='[%(asctime)s][%(levelname)s] %(message)s', encoding='utf-8', level=logging.INFO, handlers=[rfh])
 bot = commands.Bot(command_prefix=commands.when_mentioned_or(config.get_command_prefix()), intents=discord.Intents.all())
 
 
 @bot.event
 async def on_ready():
-    print(f'{bot.user} has connected to Discord!')
-    logging.info(f'{bot.user} has connected to Discord!')
+    print_and_log(f'{bot.user} has connected to Discord!', logging.INFO)
     while True:
         # send a message as the bot over the console by entering [channel] [message]
         admin_input = await ainput(config.get_command_prefix())
@@ -75,8 +75,7 @@ async def umfrage(ctx, *, query):
     message = await ctx.channel.send(text)
     for i in range(len(options)):
         await message.add_reaction(reactions[i])
-    print('Umfrage erstellt')
-    logging.info('Umfrage erstellt')
+    print_and_log('Umfrage erstellt', logging.INFO)
 
 
 @bot.command()
@@ -99,8 +98,7 @@ async def ergebnis(ctx):
         percent = (results[option] / (total if total > 0 else 1)) * 100
         text += f'{option}\t{percent:.2f} %\n'
     await ctx.channel.send(text)
-    print('Ergebnis der Umfrage angefordert')
-    logging.info('Ergebnis der Umfrage angefordert')
+    print_and_log('Ergebnis der Umfrage angefordert', logging.INFO)
 
 
 @bot.command()
