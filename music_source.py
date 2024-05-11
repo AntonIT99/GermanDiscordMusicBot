@@ -1,19 +1,19 @@
 import asyncio
 
 import discord
-import youtube_dl
+import yt_dlp
 
 ytdl_options = {
     'format': 'bestaudio/best',
     'extractaudio': True,
+    'audioformat': 'mp3',
     'outtmpl': '%(title)s.%(ext)s',
     'restrictfilenames': True,
-    'noplaylist': True,
+    'noplaylist': False,
     'nocheckcertificate': True,
     'ignoreerrors': False,
     'logtostderr': False,
-    'quiet': False,
-    'verbose': True,
+    'quiet': True,
     'no_warnings': False,
     'default_search': 'auto',
     'source_address': '0.0.0.0',  # bind to ipv4 since ipv6 addresses cause issues sometimes
@@ -24,19 +24,19 @@ ffmpeg_options = {
     'options': '-vn'
 }
 
+ytdl = yt_dlp.YoutubeDL(ytdl_options)
+
 
 class YTDLSource(discord.PCMVolumeTransformer):
-    def __init__(self, source, *, data, volume=1):
-        super().__init__(source, volume)
 
+    def __init__(self, audio, *, data, volume=1):
+        super().__init__(audio, volume)
         self.data = data
-
         self.title = data.get('title')
         self.url = data.get('url')
 
     @classmethod
     async def from_url(cls, url, *, loop=None, stream=False):
-        ytdl = youtube_dl.YoutubeDL(ytdl_options)
         loop = loop or asyncio.get_event_loop()
         data = await loop.run_in_executor(None, lambda: ytdl.extract_info(url, download=not stream))
 

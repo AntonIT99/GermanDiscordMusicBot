@@ -1,5 +1,5 @@
 aioconsole
 discord
 PyNaCl
-youtube-dl
+yt-dlp
 StrEnum
