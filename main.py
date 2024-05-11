@@ -1,6 +1,7 @@
 import asyncio
 import logging
 import sys
+from logging.handlers import RotatingFileHandler
 from random import choice
 
 import discord
@@ -9,7 +10,8 @@ from discord.ext import commands
 
 from config import config
 
-logging.basicConfig(format='[%(asctime)s][%(levelname)s] %(message)s', filename='bot.log', encoding='utf-8', level=logging.INFO)
+rfh = RotatingFileHandler(filename='bot.log', mode='a', maxBytes=10*1024*1024, backupCount=2, encoding='utf-8', delay=0)
+logging.basicConfig(format='[%(asctime)s][%(levelname)s] %(message)s', encoding='utf-8', level=logging.INFO, handlers=[rfh])
 bot = commands.Bot(command_prefix=commands.when_mentioned_or(config.get_command_prefix()), intents=discord.Intents.all())
 
 
@@ -18,7 +20,8 @@ async def on_ready():
     print(f'{bot.user} has connected to Discord!')
     logging.info(f'{bot.user} has connected to Discord!')
     while True:
-        admin_input = await ainput("+")
+        # send a message as the bot over the console by entering [channel] [message]
+        admin_input = await ainput(config.get_command_prefix())
         if len(admin_input.split(" ", 1)) == 2:
             channel = discord.utils.get(bot.get_all_channels(), name=admin_input.split(" ", 1)[0])
             await channel.send(admin_input.split(" ", 1)[1])

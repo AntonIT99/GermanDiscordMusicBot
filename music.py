@@ -9,12 +9,14 @@ import youtube_dl
 from discord.ext import commands
 
 from config import config
+from emoji import Emoji
 
 music_extensions = ['.mp3', '.wav', '.ogg', '.flac', '.m4a', '.opus', '.wma', '.ac3', '.eac3', '.mp4', '.mkv', '.avi', '.mov', '.flv', '.webm', '.mpg', '.mpeg', '.ts', '.m2ts', '.wmv']
 
 ytdl_options = {
     'format': 'bestaudio/best',
-    'outtmpl': '%(extractor)s-%(id)s-%(title)s.%(ext)s',
+    'extractaudio': True,
+    'outtmpl': '%(title)s.%(ext)s',
     'restrictfilenames': True,
     'noplaylist': True,
     'nocheckcertificate': True,
@@ -34,8 +36,22 @@ ffmpeg_options = {
 
 
 class Musik(commands.Cog):
+
     def __init__(self, bot):
         self.bot = bot
+        self.playing_song = None
+
+    @commands.Cog.listener()
+    async def on_reaction_add(self, reaction, user):
+        if user != self.bot.user and self.playing_song is not None and reaction.message == self.playing_song[0]:
+            if reaction.emoji == Emoji.PAUSE:
+                # await self.playing_song[0].clear_reaction(Emoji.PAUSE)
+                await self.playing_song[0].add_reaction(Emoji.PLAY)
+                self.playing_song[1].pause()
+            elif reaction.emoji == Emoji.PLAY:
+                # await self.playing_song[0].clear_reaction(Emoji.PLAY)
+                await self.playing_song[0].add_reaction(Emoji.PAUSE)
+                self.playing_song[1].resume()
 
     @commands.command()
     async def beitreten(self, ctx, *, channel: discord.VoiceChannel = None):
@@ -80,7 +96,8 @@ class Musik(commands.Cog):
             if exists(path):
                 source = discord.PCMVolumeTransformer(discord.FFmpegPCMAudio(path))
                 ctx.voice_client.play(source)
-                await ctx.send(f'{query} wird gespielt')
+                self.playing_song = (await ctx.send(f'{query} wird gespielt'), ctx.voice_client)
+                await self.playing_song[0].add_reaction(Emoji.PAUSE)
             else:
                 await ctx.send(f'{query} kann nicht gefunden werden')
         except Exception as error:
@@ -89,11 +106,14 @@ class Musik(commands.Cog):
 
     @commands.command()
     async def stoppen(self, ctx):
-        """Das Musikspielen Aufhören"""
+        """Das Musikspielen aufhören"""
         if ctx.voice_client is not None:
             ctx.voice_client.stop()
             print("Musik gestoppt")
             logging.info("Musik gestoppt")
+        if self.playing_song is not None:
+            pass
+            # await self.playing_song[0].clear_reactions()
 
     @commands.command()
     async def streamen(self, ctx, *, url):
@@ -102,9 +122,22 @@ class Musik(commands.Cog):
             player = await YTDLSource.from_url(url, loop=self.bot.loop, stream=True)
             ctx.voice_client.play(player, after=lambda e: print(f'Player error: {e}') if e else None)
 
-        await ctx.send(f'{player.title} wird gespielt')
+        self.playing_song = (await ctx.send(f'{player.title} wird gespielt'), ctx.voice_client)
+        await self.playing_song[0].add_reaction(Emoji.PAUSE)
         print(f'{player.title} wird gespielt')
         logging.info(f'{player.title} wird gespielt')
+
+    @commands.command()
+    async def pausieren(self, ctx):
+        """Musik pausieren"""
+        if ctx.voice_client.is_playing():
+            ctx.voice_state.voice.pause()
+
+    @commands.command()
+    async def fortsetzen(self, ctx):
+        """Musik fortsetzen"""
+        if ctx.voice_client.is_paused():
+            ctx.voice_state.voice.resume()
 
     @commands.command()
     async def volume(self, ctx, volume: int):
