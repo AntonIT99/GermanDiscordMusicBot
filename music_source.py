@@ -49,16 +49,17 @@ class YTDLSource(discord.PCMVolumeTransformer):
 
 
 class MusicSource:
-    def __init__(self, name, is_url, content, loop=None):
+    def __init__(self, name, is_url, content, loop=None, stream=True):
         self.name = name
         self.is_url = is_url
         self.content = content
         self.loop = loop
+        self.stream = stream
 
     @classmethod
-    async def create(cls, name: str, is_url: bool, loop=None):
-        content = await YTDLSource.from_url(name, loop=loop, stream=True) if is_url else discord.PCMVolumeTransformer(discord.FFmpegPCMAudio(name))
+    async def create(cls, name: str, is_url: bool, loop=None, stream=True):
+        content = await YTDLSource.from_url(name, loop=loop, stream=stream) if is_url else discord.PCMVolumeTransformer(discord.FFmpegPCMAudio(name))
         return cls(name, is_url, content, loop)
 
     async def copy(self):
-        return await self.create(self.name, self.is_url, self.loop)
+        return await self.create(self.name, self.is_url, self.loop, self.stream)

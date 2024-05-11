@@ -7,11 +7,9 @@ import discord
 from discord.ext import commands
 
 from config import config
-from helper import print_and_log
+from helper import print_and_log, is_valid_url, is_music_file
 from music_source import MusicSource
 from music_view import create_music_view
-
-music_extensions = ['.mp3', '.wav', '.ogg', '.flac', '.m4a', '.opus', '.wma', '.ac3', '.eac3', '.mp4', '.mkv', '.avi', '.mov', '.flv', '.webm', '.mpg', '.mpeg', '.ts', '.m2ts', '.wmv']
 
 
 class Musik(commands.Cog):
@@ -40,7 +38,7 @@ class Musik(commands.Cog):
         Nutzung: listen [Filter]
         """
         path = config.get_music_path()
-        music_files = [f for f in listdir(path) if isfile(join(path, f)) and os.path.splitext(f)[1].lower() in music_extensions]
+        music_files = [f for f in listdir(path) if isfile(join(path, f)) and is_music_file(f)]
         no_results = True
         response = "Musikdateien:\n```"
         for file in music_files:
@@ -54,44 +52,50 @@ class Musik(commands.Cog):
         if no_results:
             response += "Keine Ergebnisse"
         response += "```"
-        await ctx.send(response)
+        await ctx.channel.send(response)
 
     @commands.command()
     async def spielen(self, ctx, *, query):
-        """Eine Musikdatei aus dem lokalen Dateisystem abspielen"""
-        path = config.get_music_path() + os.path.sep + query
-        if exists(path):
-            source = await MusicSource.create(path, False, self.bot.loop)
-            self.last_music_view = await create_music_view(ctx, source, query)
-            await self.last_music_view.play()
+        """Musik aus dem lokalen Dateisystem abspielen oder aus einer URL herunterladen"""
+        if is_valid_url(query):
+            async with ctx.typing():
+                source = await MusicSource.create(query, True, loop=self.bot.loop, stream=False)
+                self.last_music_view = await create_music_view(ctx, source, source.content.title, self)
+                await self.last_music_view.play()
         else:
-            await ctx.send(f'{query} kann nicht gefunden werden')
+            path = config.get_music_path() + os.path.sep + query
+            if exists(path):
+                source = await MusicSource.create(path, False, self.bot.loop)
+                self.last_music_view = await create_music_view(ctx, source, query, self)
+                await self.last_music_view.play()
+            else:
+                await ctx.send(f'{query} kann nicht gefunden werden')
 
     @commands.command()
     async def streamen(self, ctx, *, url):
-        """Musik aus einer URL abspielen"""
+        """Musik aus einer URL streamen"""
         async with ctx.typing():
-            source = await MusicSource.create(url, True, self.bot.loop)
-            self.last_music_view = await create_music_view(ctx, source, source.content.title)
+            source = await MusicSource.create(url, True, loop=self.bot.loop, stream=True)
+            self.last_music_view = await create_music_view(ctx, source, source.content.title, self)
             await self.last_music_view.play()
 
     @commands.command()
     async def stoppen(self, ctx):
         """Das Musikspielen aufhören"""
         if self.last_music_view is not None:
-            self.last_music_view.stop()
+            await self.last_music_view.stop()
 
     @commands.command()
     async def pausieren(self, ctx):
         """Musik pausieren"""
         if self.last_music_view is not None:
-            self.last_music_view.pause()
+            await self.last_music_view.pause()
 
     @commands.command()
     async def fortsetzen(self, ctx):
         """Musik fortsetzen"""
         if self.last_music_view is not None:
-            self.last_music_view.resume()
+            await self.last_music_view.resume()
 
     @commands.command()
     async def volume(self, ctx, volume: int):
@@ -119,8 +123,6 @@ class Musik(commands.Cog):
             else:
                 await ctx.send("Mit keinem Sprachkanal verbunden.")
                 raise commands.CommandError("Not connected to a voice channel.")
-        elif ctx.voice_client.is_playing():
-            ctx.voice_client.stop()
 
 
 async def setup(bot):

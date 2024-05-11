@@ -1,5 +1,6 @@
 import asyncio
 import logging
+import os
 import sys
 from logging.handlers import RotatingFileHandler
 from random import choice
@@ -9,7 +10,7 @@ from aioconsole import ainput
 from discord.ext import commands
 
 from config import config
-from helper import print_and_log
+from helper import print_and_log, is_music_file
 
 rfh = RotatingFileHandler(filename='bot.log', mode='a', maxBytes=1024*1024, backupCount=2, encoding='utf-8', delay=0)
 logging.basicConfig(format='[%(asctime)s][%(levelname)s] %(message)s', encoding='utf-8', level=logging.INFO, handlers=[rfh])
@@ -29,12 +30,22 @@ async def on_ready():
 
 @bot.event
 async def on_message(message):
-    if not message.author.bot:
-        if has_word_from_list(message.content, config.get_language_list('greetings_understanding')):
-            await message.channel.send(f"{choice(config.get_language_list('greetings_using'))} {message.author.mention}")
-        elif has_word_from_list(message.content, config.get_language_list('farewell_understanding')):
-            await message.channel.send(f"{choice(config.get_language_list('farewell_using'))} {message.author.mention}")
-        await bot.process_commands(message)
+    if message.author == bot.user:
+        return
+
+    if has_word_from_list(message.content, config.get_language_list('greetings_understanding')):
+        await message.channel.send(f"{choice(config.get_language_list('greetings_using'))} {message.author.mention}")
+    elif has_word_from_list(message.content, config.get_language_list('farewell_understanding')):
+        await message.channel.send(f"{choice(config.get_language_list('farewell_using'))} {message.author.mention}")
+
+    if message.attachments:
+        for attachment in message.attachments:
+            if is_music_file(attachment.filename):
+                await attachment.save(config.get_music_path() + os.path.sep + attachment.filename.replace('_', ' '))
+                await message.channel.send(f"Datei '{attachment.filename.replace('_', ' ')}' hochgeladen.")
+                print_and_log(f"Datei '{attachment.filename.replace('_', ' ')}' hochgeladen.", logging.INFO)
+
+    await bot.process_commands(message)
 
 
 @bot.event
