@@ -72,7 +72,7 @@ class Musik(commands.Cog):
         """Musik aus einer URL abspielen"""
         async with ctx.typing():
             source = await MusicSource.create(url, True, self.bot.loop)
-            self.last_music_view = await create_music_view(ctx, source, source.title)
+            self.last_music_view = await create_music_view(ctx, source, source.content.title)
             await self.last_music_view.play()
 
     @commands.command()
