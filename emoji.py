@@ -2,5 +2,7 @@ from strenum import StrEnum
 
 
 class Emoji(StrEnum):
-    PAUSE = "⏸️"
     PLAY = "▶️"
+    PAUSE = "⏸️"
+    PLAY_PAUSE = "⏯️"
+    STOP = "⏹️"
