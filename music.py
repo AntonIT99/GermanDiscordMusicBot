@@ -54,7 +54,7 @@ class Musik(commands.Cog):
 
     @commands.command()
     async def spielen(self, ctx, *, query):
-        """Musik aus dem lokalen Dateisystem abspielen oder aus einer URL herunterladen"""
+        """Musik aus einer Datei oder einer URL abspielen"""
         if is_valid_url(query):
             async with ctx.typing():
                 source = await MusicSource.create(query, True, loop=self.bot.loop, stream=False)

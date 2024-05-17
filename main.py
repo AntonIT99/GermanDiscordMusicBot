@@ -8,6 +8,7 @@ from random import choice
 
 import discord
 from aioconsole import ainput
+from discord.abc import Messageable
 from discord.ext import commands
 
 from config import config
@@ -156,22 +157,38 @@ async def herunterfahren(ctx):
     await bot.close()
 
 
-async def admin_console_input_loop():
+@bot.command()
+@commands.is_owner()
+async def sagen(ctx, arg1, arg2=None):
+    # Say something as the bot using syntax: sagen "[message]" [channel] or sagen "[message]"
+    await say_as_bot(arg1.strip('"'), arg2, ctx)
 
+
+async def say_as_bot(message, channel_name="", ctx=None):
+    channel = discord.utils.get(bot.get_all_channels(), name=channel_name)
+    if channel is not None and isinstance(channel, Messageable):
+        await channel.send(message)
+    elif last_channel is not None and isinstance(last_channel, Messageable):
+        await last_channel.send(message)
+    else:
+        print_and_log("Kanal nicht gefunden", logging.ERROR)
+        if ctx is not None:
+            await ctx.channel.send("Kanal nicht gefunden")
+
+
+async def admin_console_input_loop():
     while is_connected:
         try:
             # Send a message as the bot over the console by entering [channel] [message]
             admin_input = await ainput(config.get_command_prefix())
             logging.info("Konsole: {}".format(admin_input))
-            channel = last_channel
-            message = admin_input
-            if len(admin_input.split(" ", 1)) == 2:
-                channel = discord.utils.get(bot.get_all_channels(), name=admin_input.split(" ", 1)[0])
-                message = admin_input.split(" ", 1)[1]
-            if channel is not None:
-                await channel.send(message)
+            query = admin_input.split(" ", 1)
+            if len(query) == 1:
+                await say_as_bot(query[0])
+            elif len(query) == 2:
+                await say_as_bot(query[1], query[0])
             else:
-                print_and_log("Keinen Kanal ausgewählt", logging.ERROR)
+                print_and_log("Eingabe konnte nicht interpretiert werden", logging.ERROR)
         except EOFError:
             logging.error('EOFError: Eingabe konnte nicht gelesen werden')
 
