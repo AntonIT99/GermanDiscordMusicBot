@@ -61,6 +61,12 @@ async def on_message(message):
 
 
 @bot.event
+async def on_command(ctx):
+    channel_name = ctx.channel.name if hasattr(ctx.channel, 'name') else type(ctx.channel).__name__
+    print_and_log("[{} -> {}] {} ".format(ctx.message.author, channel_name, ctx.message.content), logging.INFO)
+
+
+@bot.event
 async def on_member_update(before, after):
     if not after.bot and len(before.roles) == 1 and len(after.roles) > 1:
         channel = discord.utils.get(after.guild.channels, name=config.get_welcome_channel())
