@@ -21,6 +21,11 @@ class Config:
         self.__read()
         return self.cp.get('Settings', 'token')
 
+    def get_owner_id(self):
+        self.__read()
+        owner_id = self.cp.get('Settings', 'owner_id')
+        return int(owner_id) if owner_id.isdigit() else None
+
     def get_music_path(self):
         self.__read()
         path = self.cp.get('Settings', 'music_path')

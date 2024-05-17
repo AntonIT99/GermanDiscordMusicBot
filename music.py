@@ -27,9 +27,7 @@ class Musik(commands.Cog):
             await ctx.voice_client.move_to(channel)
         else:
             await channel.connect()
-
-        print("Sprachkanal " + channel.name + " beigetreten")
-        logging.info("Sprachkanal " + channel.name + " beigetreten")
+        print_and_log("Sprachkanal {} beigetreten".format(channel.name), logging.INFO)
 
     @commands.command()
     async def listen(self, ctx, *, query=None):

@@ -40,7 +40,7 @@ class MusicView(discord.ui.View):
             print_and_log(f'{self.song_title} wird gespielt', logging.INFO)
             self.state = State.PLAYING
             self.music_cog.last_music_view = self
-            asyncio.ensure_future(self.reset_play_button_loop())
+            asyncio.create_task(self.reset_play_button_loop()) # noqa
             await self.set_play_pause_button(Emoji.PAUSE)
 
     def on_playing_interrupted(self, error):
@@ -105,17 +105,17 @@ class MusicView(discord.ui.View):
     @discord.ui.button(style=discord.ButtonStyle.primary, emoji=Emoji.PAUSE)
     async def play_pause_button(self, interaction, button):
         if self.state == State.NOT_PLAYING:
-            asyncio.ensure_future(self.replay())
+            asyncio.create_task(self.replay()) # noqa
         elif self.state == State.PLAYING:
-            asyncio.ensure_future(self.pause())
+            asyncio.create_task(self.pause()) # noqa
         elif self.state == State.PAUSED:
-            asyncio.ensure_future(self.resume())
+            asyncio.create_task(self.resume()) # noqa
         await interaction.response.defer()
 
     @discord.ui.button(style=discord.ButtonStyle.red, emoji=Emoji.STOP)
     async def stop_button(self, interaction, button):
         if self.state != State.NOT_PLAYING:
-            asyncio.ensure_future(self.stop())
+            asyncio.create_task(self.stop()) # noqa
         await interaction.response.defer()
 
     @discord.ui.button(style=discord.ButtonStyle.secondary, emoji=Emoji.VOLUME_UP)

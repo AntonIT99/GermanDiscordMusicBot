@@ -1,6 +1,7 @@
 import asyncio
 import logging
 import os
+import signal
 import sys
 from logging.handlers import RotatingFileHandler
 from random import choice
@@ -14,18 +15,27 @@ from helper import print_and_log, is_music_file
 
 rfh = RotatingFileHandler(filename='bot.log', mode='a', maxBytes=1024*1024, backupCount=2, encoding='utf-8', delay=0)
 logging.basicConfig(format='[%(asctime)s][%(levelname)s] %(message)s', encoding='utf-8', level=logging.INFO, handlers=[rfh])
-bot = commands.Bot(command_prefix=commands.when_mentioned_or(config.get_command_prefix()), intents=discord.Intents.all())
-
+bot = commands.Bot(command_prefix=commands.when_mentioned_or(config.get_command_prefix()), owner_id=config.get_owner_id(), intents=discord.Intents.all())
+is_connected = False
+restart_triggered = False
 
 @bot.event
 async def on_ready():
-    print_and_log(f'{bot.user} has connected to Discord!', logging.INFO)
-    while True:
-        # send a message as the bot over the console by entering [channel] [message]
-        admin_input = await ainput(config.get_command_prefix())
-        if len(admin_input.split(" ", 1)) == 2:
-            channel = discord.utils.get(bot.get_all_channels(), name=admin_input.split(" ", 1)[0])
-            await channel.send(admin_input.split(" ", 1)[1])
+    global is_connected
+    is_connected = True
+    print_and_log(f'{bot.user} hat sich mit Discord verbunden!', logging.INFO)
+    # Check if the environment has a TTY (interactive terminal) or if it is an IDE (IDEs have integrated consoles)
+    if sys.stdin.isatty() or any(key in os.environ for key in ['PYCHARM_HOSTED', 'VSCODE_PID']):
+        asyncio.create_task(admin_console_input_loop()) # noqa
+    else:
+        logging.info('Keine Konsole verfügbar. Bot wird als Hintergrundprozess ausgeführt.')
+
+
+@bot.event
+async def on_disconnect():
+    global is_connected
+    is_connected = False
+    print_and_log(f'{bot.user} hat Discord verlassen!', logging.INFO)
 
 
 @bot.event
@@ -120,19 +130,57 @@ async def hilfe(ctx):
     await ctx.send_help()
 
 
+@bot.command()
+@commands.is_owner()
+async def neustarten(ctx):
+    global restart_triggered
+    restart_triggered = True
+    await ctx.send("Wird neugestartet")
+    print_and_log("Bot wird neugestartet", logging.INFO)
+    await bot.close()
+
+
+@bot.command()
+@commands.is_owner()
+async def herunterfahren(ctx):
+    await ctx.send("Wird heruntergefahren")
+    print_and_log("Bot wird heruntergefahren", logging.INFO)
+    await bot.close()
+
+
+async def admin_console_input_loop():
+    while is_connected:
+        try:
+            # Send a message as the bot over the console by entering [channel] [message]
+            admin_input = await ainput(config.get_command_prefix())
+            logging.info("Konsole: {}".format(admin_input))
+            if len(admin_input.split(" ", 1)) == 2:
+                channel = discord.utils.get(bot.get_all_channels(), name=admin_input.split(" ", 1)[0])
+                await channel.send(admin_input.split(" ", 1)[1])
+        except EOFError:
+            logging.error('EOFError: Eingabe konnte nicht gelesen werden')
+
+
 def has_word_from_list(string, words):
     for word in words:
         if word.lower() in [s.lower() for s in string.split(" ")]:
             return True
     return False
 
+def restart(signum, frame):
+    os.execv(sys.executable, [sys.executable] + sys.argv)
 
 async def main():
+    signal.signal(signal.SIGTERM, restart)
     async with bot:
         await bot.load_extension('music')
         await bot.start(config.get_token())
+    if restart_triggered:
+        os.kill(os.getpid(), signal.SIGTERM)
 
-try:
-    asyncio.run(main())
-except KeyboardInterrupt:
-    sys.exit()
+
+if __name__ == "__main__":
+    try:
+        asyncio.run(main())
+    except KeyboardInterrupt:
+        sys.exit()
