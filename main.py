@@ -18,14 +18,14 @@ logging.basicConfig(format='[%(asctime)s][%(levelname)s] %(message)s', encoding=
 bot = commands.Bot(command_prefix=commands.when_mentioned_or(config.get_command_prefix()), owner_id=config.get_owner_id(), intents=discord.Intents.all())
 is_connected = False
 restart_triggered = False
+last_channel = None
 
 @bot.event
 async def on_ready():
     global is_connected
     is_connected = True
     print_and_log(f'{bot.user} hat sich mit Discord verbunden!', logging.INFO)
-    # Check if the environment has a TTY (interactive terminal) or if it is an IDE (IDEs have integrated consoles)
-    if sys.stdin.isatty() or any(key in os.environ for key in ['PYCHARM_HOSTED', 'VSCODE_PID']):
+    if not is_background_process():
         asyncio.create_task(admin_console_input_loop()) # noqa
     else:
         logging.info('Keine Konsole verfügbar. Bot wird als Hintergrundprozess ausgeführt.')
@@ -40,7 +40,9 @@ async def on_disconnect():
 
 @bot.event
 async def on_message(message):
+    global last_channel
     if message.author == bot.user:
+        last_channel = message.channel
         return
 
     if has_word_from_list(message.content, config.get_language_list('greetings_understanding')):
@@ -149,14 +151,21 @@ async def herunterfahren(ctx):
 
 
 async def admin_console_input_loop():
+
     while is_connected:
         try:
             # Send a message as the bot over the console by entering [channel] [message]
             admin_input = await ainput(config.get_command_prefix())
             logging.info("Konsole: {}".format(admin_input))
+            channel = last_channel
+            message = admin_input
             if len(admin_input.split(" ", 1)) == 2:
                 channel = discord.utils.get(bot.get_all_channels(), name=admin_input.split(" ", 1)[0])
-                await channel.send(admin_input.split(" ", 1)[1])
+                message = admin_input.split(" ", 1)[1]
+            if channel is not None:
+                await channel.send(message)
+            else:
+                print_and_log("Keinen Kanal ausgewählt", logging.ERROR)
         except EOFError:
             logging.error('EOFError: Eingabe konnte nicht gelesen werden')
 
@@ -167,16 +176,23 @@ def has_word_from_list(string, words):
             return True
     return False
 
+def is_background_process():
+    # Check if the environment has a TTY (interactive terminal) or if it is an IDE (IDEs have integrated consoles)
+    return not sys.stdin.isatty() and not any(key in os.environ for key in ['PYCHARM_HOSTED', 'VSCODE_PID'])
+
 def restart(signum, frame):
     os.execv(sys.executable, [sys.executable] + sys.argv)
 
 async def main():
-    signal.signal(signal.SIGTERM, restart)
     async with bot:
         await bot.load_extension('music')
         await bot.start(config.get_token())
-    if restart_triggered:
+    if is_background_process():
+        if restart_triggered:
+            signal.signal(signal.SIGTERM, restart)
         os.kill(os.getpid(), signal.SIGTERM)
+    elif restart_triggered:
+        os.execv(sys.executable, [sys.executable] + sys.argv)
 
 
 if __name__ == "__main__":
