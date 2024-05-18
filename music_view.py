@@ -120,8 +120,8 @@ class MusicView(discord.ui.View):
 
     @discord.ui.button(style=discord.ButtonStyle.secondary, emoji=Emoji.VOLUME_UP)
     async def volume_up_button(self, interaction, button):
-        if self.source.content.volume + 0.1 <= 1:
-            self.source.content.volume += 0.1
+        if self.source.content.volume + 0.2 <= 1:
+            self.source.content.volume += 0.2
         else:
             self.source.content.volume = 1
         print_and_log("Volume wurde zu {:.0f}% gesetzt".format(self.source.content.volume * 100), logging.INFO)
@@ -129,8 +129,8 @@ class MusicView(discord.ui.View):
 
     @discord.ui.button(style=discord.ButtonStyle.secondary, emoji=Emoji.VOLUME_DOWN)
     async def volume_down_button(self, interaction, button):
-        if self.source.content.volume - 0.1 >= 0:
-            self.source.content.volume -= 0.1
+        if self.source.content.volume - 0.2 >= 0:
+            self.source.content.volume -= 0.2
         else:
             self.source.content.volume = 0
         print_and_log("Volume wurde zu {:.0f}% gesetzt".format(self.source.content.volume * 100), logging.INFO)
