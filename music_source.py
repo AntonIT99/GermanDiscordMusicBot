@@ -9,7 +9,7 @@ ytdl_options = {
     'audioformat': 'mp3',
     'outtmpl': '%(title)s.%(ext)s',
     'restrictfilenames': True,
-    'noplaylist': False,
+    'noplaylist': True,
     'nocheckcertificate': True,
     'ignoreerrors': False,
     'logtostderr': False,
