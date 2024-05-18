@@ -28,7 +28,7 @@ class MusicView(discord.ui.View):
         self.music_cog = music_cog
 
     def get_text_for_message(self):
-        return "{} wird gespielt\n> {} {:.0f}%".format(self.song_title, Emoji.VOLUME_UP, self.source.content.volume * 100)
+        return "{}\n> {} {:.0f}%".format(self.song_title, Emoji.VOLUME_UP, self.source.content.volume * 100)
 
     @classmethod
     async def create(cls, ctx, source: MusicSource, title: str, music_cog):
