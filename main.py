@@ -88,7 +88,7 @@ async def berichten(ctx):
 @bot.command()
 async def umfrage(ctx, *, query):
     """
-    Eine Umfrage erstellen (Nutzung: umfrage "Optionsname 1" "Optionsname 2" "Optionsname n")
+    Eine Umfrage erstellen, z.B. umfrage "Option 1" "Option 2" "Option n"
     """
     options = [query.split("\"")[i] for i in range(1, len(query.split("\"")), 2)]
     emojis = Emoji.get_squares()
