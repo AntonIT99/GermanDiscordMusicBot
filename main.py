@@ -3,6 +3,7 @@ import logging
 import os
 import signal
 import sys
+from collections import deque
 from logging.handlers import RotatingFileHandler
 from random import choice
 
@@ -12,9 +13,11 @@ from discord.abc import Messageable
 from discord.ext import commands
 
 from config import config
+from emoji import Emoji
 from helper import print_and_log, is_music_file
 
-rfh = RotatingFileHandler(filename='bot.log', mode='a', maxBytes=1024*1024, backupCount=2, encoding='utf-8', delay=0)
+log_file = "bot.log"
+rfh = RotatingFileHandler(filename=log_file, mode='a', maxBytes=1024*1024, backupCount=2, encoding='utf-8', delay=0)
 logging.basicConfig(format='[%(asctime)s][%(levelname)s] %(message)s', encoding='utf-8', level=logging.INFO, handlers=[rfh])
 bot = commands.Bot(command_prefix=commands.when_mentioned_or(config.get_command_prefix()), owner_id=config.get_owner_id(), intents=discord.Intents.all())
 is_connected = False
@@ -88,11 +91,9 @@ async def umfrage(ctx, *, query):
     Eine Umfrage erstellen (Nutzung: umfrage "Optionsname 1" "Optionsname 2" "Optionsname n")
     """
     options = [query.split("\"")[i] for i in range(1, len(query.split("\"")), 2)]
-    emojis1 = ["\U0001F534", "\U000026AB", "\U000026AA", "\U0001F535", "\U0001F7E1", "\U0001F7E0", "\U0001F7E4", "\U0001F7E3", "\U0001F7E2"]
-    emojis2 = ["\U0001F7EA", "\U0001F7E9", "\U0001F7E8", "\U00002B1C", "\U0001F7E5", "\U0001F7EB", "\U0001F7E7", "\U0001F7E6", "\U0001F7EB"]
-    emojis = emojis1
+    emojis = Emoji.get_squares()
     if len(emojis) < len(options):
-        emojis += emojis2
+        emojis += Emoji.get_circles()
     text = "[Umfrage]\n"
     reactions = []
     for i in range(len(options)):
@@ -142,24 +143,52 @@ async def hilfe(ctx):
 @bot.command()
 @commands.is_owner()
 async def neustarten(ctx):
+    """
+    [Admin-Befehl]
+    """
     global restart_triggered
     restart_triggered = True
     await ctx.send("Wird neugestartet")
-    print_and_log("Bot wird neugestartet", logging.INFO)
+    print_and_log(f"{bot.user} wird neugestartet", logging.INFO)
+    await bot.change_presence(status=discord.Status.offline)
     await bot.close()
 
 
 @bot.command()
 @commands.is_owner()
 async def herunterfahren(ctx):
+    """
+    [Admin-Befehl]
+    """
     await ctx.send("Wird heruntergefahren")
-    print_and_log("Bot wird heruntergefahren", logging.INFO)
+    print_and_log(f"{bot.user} wird heruntergefahren", logging.INFO)
+    await bot.change_presence(status=discord.Status.offline)
     await bot.close()
 
 
 @bot.command()
 @commands.is_owner()
+async def loggen(ctx, lines=20):
+    """
+    [Admin-Befehl]
+    """
+    with open(log_file, 'r', encoding='utf-8') as file:
+        last_lines = deque(file, maxlen=lines)
+    response = "```"
+    for line in last_lines:
+        if len(response + line + "```") > 2000:
+            await ctx.channel.send(response + "```")
+            response = "```"
+        response += line
+    await ctx.channel.send(response + "```")
+
+
+@bot.command()
+@commands.is_owner()
 async def sagen(ctx, arg1, arg2=None):
+    """
+    [Admin-Befehl]
+    """
     # Say something as the bot using syntax: sagen "[message]" [channel] or sagen "[message]"
     await say_as_bot(arg1.strip('"'), arg2, ctx)
 

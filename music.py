@@ -9,7 +9,7 @@ from discord.ext import commands
 from config import config
 from helper import print_and_log, is_valid_url, is_music_file
 from music_source import MusicSource
-from music_view import create_music_view
+from music_view import MusicView
 
 
 class Musik(commands.Cog):
@@ -58,13 +58,13 @@ class Musik(commands.Cog):
         if is_valid_url(query):
             async with ctx.typing():
                 source = await MusicSource.create(query, True, loop=self.bot.loop, stream=False)
-                self.last_music_view = await create_music_view(ctx, source, source.content.title, self)
+                self.last_music_view = await MusicView.create(ctx, source, source.content.title, self)
                 await self.last_music_view.play()
         else:
             path = config.get_music_path() + os.path.sep + query
             if exists(path):
                 source = await MusicSource.create(path, False, self.bot.loop)
-                self.last_music_view = await create_music_view(ctx, source, query, self)
+                self.last_music_view = await MusicView.create(ctx, source, query, self)
                 await self.last_music_view.play()
             else:
                 await ctx.send(f'{query} kann nicht gefunden werden')
@@ -74,7 +74,7 @@ class Musik(commands.Cog):
         """Musik aus einer URL streamen"""
         async with ctx.typing():
             source = await MusicSource.create(url, True, loop=self.bot.loop, stream=True)
-            self.last_music_view = await create_music_view(ctx, source, source.content.title, self)
+            self.last_music_view = await MusicView.create(ctx, source, source.content.title, self)
             await self.last_music_view.play()
 
     @commands.command()
@@ -100,8 +100,11 @@ class Musik(commands.Cog):
         """Volume beim Musikspielen ändern"""
         if ctx.voice_client is None:
             return await ctx.send("Mit keinem Sprachkanal verbunden.")
-
-        ctx.voice_client.source.volume = volume / 100
+        if self.last_music_view is not None:
+            self.last_music_view.source.content.volume = volume / 100
+            await self.last_music_view.update_volume()
+        else:
+            ctx.voice_client.source.volume = volume / 100
         await ctx.send(f"Volume wurde zu {volume}% gesetzt")
         print_and_log(f"Volume wurde zu {volume}% gesetzt", logging.INFO)
 
@@ -109,8 +112,8 @@ class Musik(commands.Cog):
     async def verlassen(self, ctx):
         """Einen Sprachkanal verlassen"""
         if ctx.voice_client is not None:
-            await ctx.voice_client.disconnect()
             print_and_log(f"Verlassen des Sprachkanals {ctx.voice_client.channel.name}%", logging.INFO)
+            await ctx.voice_client.disconnect()
 
     @spielen.before_invoke
     @streamen.before_invoke

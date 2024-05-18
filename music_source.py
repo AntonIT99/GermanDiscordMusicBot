@@ -3,11 +3,14 @@ import asyncio
 import discord
 import yt_dlp
 
+from config import config
+
 ytdl_options = {
     'format': 'bestaudio/best',
     'extractaudio': True,
     'audioformat': 'mp3',
     'outtmpl': '%(title)s.%(ext)s',
+    'paths': {'home': config.get_music_path()},
     'restrictfilenames': True,
     'noplaylist': True,
     'nocheckcertificate': True,
@@ -20,8 +23,11 @@ ytdl_options = {
 }
 
 ffmpeg_options = {
-    'before_options': '-reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5', # for ffmpeg version >= 5 only, does not work on ffmpeg version 4
     'options': '-vn'
+}
+
+ffmpeg_stream_options = {
+    'before_options': '-reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5', # for ffmpeg version >= 5 only, does not work on ffmpeg version 4
 }
 
 ytdl = yt_dlp.YoutubeDL(ytdl_options)
@@ -45,6 +51,9 @@ class YTDLSource(discord.PCMVolumeTransformer):
             data = data['entries'][0]
 
         filename = data['url'] if stream else ytdl.prepare_filename(data)
+
+        if stream:
+            ffmpeg_options.update(ffmpeg_stream_options)
         return cls(discord.FFmpegPCMAudio(filename, **ffmpeg_options), data=data)
 
 

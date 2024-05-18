@@ -9,11 +9,6 @@ from helper import print_and_log
 from music_source import MusicSource
 
 
-async def create_music_view(ctx, source: MusicSource, title: str, music_cog):
-    view = MusicView(title, ctx.channel, ctx.voice_client, source, music_cog)
-    view.message = await ctx.send(f'{title} wird gespielt', view=view)
-    return view
-
 class State(Enum):
     NOT_PLAYING = auto()
     PLAYING = auto()
@@ -31,6 +26,15 @@ class MusicView(discord.ui.View):
         self.message = None
         self.state = State.NOT_PLAYING
         self.music_cog = music_cog
+
+    def get_text_for_message(self):
+        return "{} wird gespielt\n> {} {:.0f}%".format(self.song_title, Emoji.VOLUME_UP, self.source.content.volume * 100)
+
+    @classmethod
+    async def create(cls, ctx, source: MusicSource, title: str, music_cog):
+        view = cls(title, ctx.channel, ctx.voice_client, source, music_cog)
+        view.message = await ctx.send(view.get_text_for_message(), view=view)
+        return view
 
     async def play(self):
         """Play the current audio source associated with this view"""
@@ -102,6 +106,9 @@ class MusicView(discord.ui.View):
                     return item
         return None
 
+    async def update_volume(self):
+        await self.message.edit(content=self.get_text_for_message())
+
     @discord.ui.button(style=discord.ButtonStyle.primary, emoji=Emoji.PAUSE)
     async def play_pause_button(self, interaction, button):
         if self.state == State.NOT_PLAYING:
@@ -125,6 +132,7 @@ class MusicView(discord.ui.View):
         else:
             self.source.content.volume = 1
         print_and_log("Volume wurde zu {:.0f}% gesetzt".format(self.source.content.volume * 100), logging.INFO)
+        await self.update_volume()
         await interaction.response.defer()
 
     @discord.ui.button(style=discord.ButtonStyle.secondary, emoji=Emoji.VOLUME_DOWN)
@@ -134,5 +142,5 @@ class MusicView(discord.ui.View):
         else:
             self.source.content.volume = 0
         print_and_log("Volume wurde zu {:.0f}% gesetzt".format(self.source.content.volume * 100), logging.INFO)
+        await self.update_volume()
         await interaction.response.defer()
-
