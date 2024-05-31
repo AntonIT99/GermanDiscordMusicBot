@@ -36,13 +36,6 @@ async def on_ready():
 
 
 @bot.event
-async def on_disconnect():
-    global is_connected
-    is_connected = False
-    print_and_log(f'{bot.user} hat Discord verlassen!', logging.INFO)
-
-
-@bot.event
 async def on_message(message):
     global last_channel
     if message.author == bot.user:
@@ -148,10 +141,9 @@ async def neustarten(ctx):
     """
     global restart_triggered
     restart_triggered = True
-    await ctx.send("Wird neugestartet")
     print_and_log(f"{bot.user} wird neugestartet", logging.INFO)
-    await bot.change_presence(status=discord.Status.offline)
-    await bot.close()
+    await ctx.send("Wird neugestartet")
+    await disconnect()
 
 
 @bot.command()
@@ -160,8 +152,15 @@ async def herunterfahren(ctx):
     """
     [Admin-Befehl]
     """
-    await ctx.send("Wird heruntergefahren")
     print_and_log(f"{bot.user} wird heruntergefahren", logging.INFO)
+    await ctx.send("Wird heruntergefahren")
+    await disconnect()
+
+
+async def disconnect():
+    global is_connected
+    is_connected = False
+    print_and_log(f'{bot.user} hat Discord verlassen!', logging.INFO)
     await bot.change_presence(status=discord.Status.offline)
     await bot.close()
 
@@ -239,12 +238,12 @@ async def main():
     async with bot:
         await bot.load_extension('music')
         await bot.start(config.get_token())
-    if is_background_process():
-        if restart_triggered:
-            signal.signal(signal.SIGTERM, restart)
-        os.kill(os.getpid(), signal.SIGTERM)
-    elif restart_triggered:
-        os.execv(sys.executable, [sys.executable] + sys.argv)
+        if is_background_process():
+            if restart_triggered:
+                signal.signal(signal.SIGTERM, restart)
+            os.kill(os.getpid(), signal.SIGTERM)
+        elif restart_triggered:
+            os.execv(sys.executable, [sys.executable] + sys.argv)
 
 
 if __name__ == "__main__":
