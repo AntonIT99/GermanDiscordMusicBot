@@ -1,9 +1,21 @@
 import logging
 import os
+import re
 
 from urllib.parse import urlparse
 
 music_extensions = ['.mp3', '.wav', '.ogg', '.flac', '.m4a', '.opus', '.wma', '.ac3', '.eac3', '.mp4', '.mkv', '.avi', '.mov', '.flv', '.webm', '.mpg', '.mpeg', '.ts', '.m2ts', '.wmv']
+
+MESSAGE_LINK_RE = re.compile(r"https?://(?:ptb\.|canary\.)?discord(?:app)?\.com/channels/(\d+)/(\d+)/(\d+)$")
+
+
+def parse_message_link(link: str):
+    m = MESSAGE_LINK_RE.match(link.strip("<> "))
+    if not m:
+        return None
+    guild_id, channel_id, message_id = map(int, m.groups())
+    return guild_id, channel_id, message_id
+
 
 def print_and_log(text: str, level):
     if level == logging.CRITICAL:

@@ -7,6 +7,7 @@ from collections import deque
 from logging.handlers import RotatingFileHandler
 from random import choice
 
+import aiofiles
 import discord
 from aioconsole import ainput
 from discord.abc import Messageable
@@ -14,7 +15,7 @@ from discord.ext import commands
 
 from config import config
 from emoji import Emoji
-from helper import print_and_log, is_music_file
+from helper import print_and_log, is_music_file, parse_message_link
 
 log_file = "bot.log"
 rfh = RotatingFileHandler(filename=log_file, mode='a', maxBytes=1024*1024, backupCount=2, encoding='utf-8', delay=0)
@@ -171,11 +172,26 @@ async def loggen(ctx, lines=20):
     """
     [Admin-Befehl]
     """
-    with open(log_file, 'r', encoding='utf-8') as file:
-        last_lines = deque(file, maxlen=lines)
+    if lines < 1:
+        await ctx.send("lines muss >= 1 sein.")
+        return
+
+    try:
+        async with aiofiles.open(log_file, "r", encoding="utf-8") as f:
+            last_lines = deque(maxlen=lines)
+            async for line in f:
+                last_lines.append(line)
+            last_lines = list(last_lines)
+    except FileNotFoundError:
+        await ctx.send("Logdatei nicht gefunden.")
+        return
+    except OSError as e:
+        await ctx.send(f"Fehler beim Lesen der Logdatei: {e}")
+        return
+
     response = "```"
     for line in last_lines:
-        if len(response + line + "```") > 2000:
+        if len(response) + len(line) + 3 > 2000:
             await ctx.channel.send(response + "```")
             response = "```"
         response += line
@@ -202,6 +218,116 @@ async def say_as_bot(message, channel_name="", ctx=None):
         print_and_log("Kanal nicht gefunden", logging.ERROR)
         if ctx is not None:
             await ctx.channel.send("Kanal nicht gefunden")
+
+
+@bot.command()
+@commands.is_owner()
+async def loeschen(ctx, message_ref: str, channel_name: str = None):
+    """
+    [Admin-Befehl]
+    Löscht eine bestimmte Nachricht.
+
+    Nutzung:
+    - loeschen <message_link>
+    - loeschen <message_id>
+    - loeschen <message_id> <channel_name>
+    """
+    try:
+        # Fall A: Link
+        parsed = parse_message_link(message_ref)
+        if parsed:
+            guild_id, channel_id, message_id = parsed
+            if ctx.guild is None or ctx.guild.id != guild_id:
+                await ctx.send("Der Link gehört nicht zu diesem Server.")
+                return
+
+            channel = ctx.guild.get_channel(channel_id)
+            if channel is None:
+                await ctx.send("Kanal aus dem Link nicht gefunden.")
+                return
+
+            msg = await channel.fetch_message(message_id)
+            await msg.delete()
+            await ctx.send("Nachricht gelöscht.")
+            return
+
+        # Fall B: ID (+ optional Kanalname)
+        message_id = int(message_ref)
+
+        channel = None
+        if channel_name:
+            channel = discord.utils.get(bot.get_all_channels(), name=channel_name)
+        else:
+            channel = ctx.channel
+
+        if channel is None:
+            await ctx.send("Kanal nicht gefunden.")
+            return
+
+        msg = await channel.fetch_message(message_id)
+        await msg.delete()
+        await ctx.send("Nachricht gelöscht.")
+
+    except discord.NotFound:
+        await ctx.send("Nachricht nicht gefunden (ID/Link falsch oder zu alt/kein Zugriff).")
+    except discord.Forbidden:
+        await ctx.send("Keine Rechte zum Löschen (Manage Messages fehlt).")
+    except ValueError:
+        await ctx.send("Ungültige Message-ID. Nimm entweder einen Message-Link oder eine numerische ID.")
+    except discord.HTTPException as e:
+        await ctx.send(f"Fehler beim Löschen: {e}")
+
+
+@bot.command()
+@commands.is_owner()
+async def letzte(ctx, n: int = 10, channel_name: str = None):
+    """
+    [Admin-Befehl]
+    Zeigt die n letzten Nachrichten in einem Kanal an.
+
+    Nutzung:
+    - letzte
+    - letzte 20
+    - letzte 20 <channel_name>
+    """
+    if n < 1:
+        await ctx.send("n muss >= 1 sein.")
+        return
+    if n > 50:
+        n = 50  # sinnvoller Deckel, damit Discord nicht zugespammt wird
+
+    channel = None
+    if channel_name:
+        channel = discord.utils.get(bot.get_all_channels(), name=channel_name)
+    else:
+        channel = ctx.channel
+
+    if channel is None:
+        await ctx.send("Kanal nicht gefunden.")
+        return
+
+    lines = []
+    async for msg in channel.history(limit=n):
+        ts = msg.created_at.strftime("%Y-%m-%d %H:%M:%S")
+        content = msg.content.replace("```", "'''")
+        if msg.attachments:
+            content += " " + " ".join(a.url for a in msg.attachments)
+        if not content:
+            content = "<leer>"
+        lines.append(f"{msg.id} | #{getattr(channel, 'name', 'DM')} | [{ts}] {msg.author}: {content}")
+    lines.reverse()
+
+    header = f"Letzte {len(lines)} Nachrichten in #{getattr(channel, 'name', 'DM')}\n"
+    output = header + "\n".join(lines)
+
+    # Discord 2000-char Limit beachten
+    chunk = "```"
+    for line in output.splitlines(True):
+        if len(chunk) + len(line) + 3 > 2000:
+            await ctx.send(chunk + "```")
+            chunk = "```"
+        chunk += line
+    await ctx.send(chunk + "```")
 
 
 async def admin_console_input_loop():

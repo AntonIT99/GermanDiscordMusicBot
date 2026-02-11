@@ -3,3 +3,4 @@ discord
 PyNaCl
 yt-dlp
 StrEnum
+aiofiles
