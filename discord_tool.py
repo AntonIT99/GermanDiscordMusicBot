@@ -177,6 +177,72 @@ def cmd_download(args):
     print(f'{count} Datei(en) in {out_dir}')
 
 
+def download_file(url, target):
+    if os.path.exists(target):
+        return
+    request = urllib.request.Request(url, headers={'User-Agent': USER_AGENT})
+    with urllib.request.urlopen(request, timeout=120) as response, open(target + '.part', 'wb') as f:
+        while chunk := response.read(1 << 16):
+            f.write(chunk)
+    os.replace(target + '.part', target)
+
+
+def cmd_export(args):
+    """Kompletter Kanal: messages.json (roh), messages.md (lesbar, chronologisch) und files/ mit den Anhängen."""
+    channel_id = resolve_channel(args.channel, args.guild)
+    messages = fetch_messages(channel_id, args.limit)
+    messages.reverse()
+    extensions = tuple('.' + e.strip().lower().lstrip('.') for e in args.ext.split(',')) if args.ext else None
+    out_dir = args.out or os.path.join('downloads', channel_id)
+    files_dir = os.path.join(out_dir, 'files')
+    os.makedirs(files_dir, exist_ok=True)
+    with open(os.path.join(out_dir, 'messages.json'), 'w', encoding='utf-8') as f:
+        json.dump(messages, f, ensure_ascii=False, indent=1)
+
+    by_id = {m['id']: m for m in messages}
+    downloaded = skipped = failed = 0
+    lines = [f'# Kanal {channel_id}: {len(messages)} Nachrichten', '']
+    for message in messages:
+        author = message['author'].get('global_name') or message['author']['username']
+        lines.append(f"## {message['timestamp'][:19].replace('T', ' ')} UTC, {author} (@{message['author']['username']}), Nachricht {message['id']}")
+        reference = (message.get('message_reference') or {}).get('message_id')
+        if reference:
+            target = by_id.get(reference)
+            lines.append(f"Antwort auf {reference}" + (f" von {target['author']['username']}: {target.get('content', '')[:150]!r}" if target else ''))
+        if message.get('content'):
+            lines += ['', message['content']]
+        for embed in message.get('embeds', []):
+            text = ' | '.join(str(embed[k]) for k in ('title', 'description', 'url') if embed.get(k))
+            if text:
+                lines += ['', f'Embed: {text}']
+        seen = set()
+        for index, attachment in enumerate(message.get('attachments', []), 1):
+            filename = attachment['filename']
+            local = f"{message['id']}_{re.sub(r'[^A-Za-z0-9._-]', '_', filename)}"
+            if local.lower() in seen:  # gleicher Dateiname mehrfach in einer Nachricht
+                local = f"{message['id']}_{index}_{re.sub(r'[^A-Za-z0-9._-]', '_', filename)}"
+            seen.add(local.lower())
+            note = 'nicht heruntergeladen'
+            if extensions is None or filename.lower().endswith(extensions):
+                try:
+                    download_file(attachment['url'], os.path.join(files_dir, local))
+                    downloaded += 1
+                    note = f'files/{local}'
+                except (urllib.error.URLError, OSError) as e:
+                    failed += 1
+                    note = f'Download fehlgeschlagen: {e}'
+            else:
+                skipped += 1
+            description = f" Beschreibung: {attachment['description']}" if attachment.get('description') else ''
+            lines += ['', f"Anhang: {filename} ({attachment.get('size')} Bytes) -> {note}{description}"]
+        if message.get('reactions'):
+            lines += ['', 'Reaktionen: ' + ', '.join(f"{r['emoji'].get('name')} x{r['count']}" for r in message['reactions'])]
+        lines.append('')
+    with open(os.path.join(out_dir, 'messages.md'), 'w', encoding='utf-8') as f:
+        f.write('\n'.join(lines))
+    print(f'{len(messages)} Nachrichten, {downloaded} Dateien geladen, {skipped} Anhänge anderer Typen ausgelassen, {failed} fehlgeschlagen -> {out_dir}')
+
+
 def main():
     sys.stdout.reconfigure(encoding='utf-8', errors='replace')
     parser = argparse.ArgumentParser(description='Lesender Discord-Zugriff über den Bot-Account.')
@@ -207,6 +273,14 @@ def main():
     p.add_argument('--ext', help='Dateiendungen, z.B. png oder png,jpg')
     p.add_argument('--out', help='Zielordner (Standard: downloads/<Kanal-ID>)')
     p.set_defaults(func=cmd_download)
+
+    p = sub.add_parser('export', help='Ganzen Kanal sichern: Nachrichten (JSON + Markdown) und Anhänge')
+    p.add_argument('channel', help='Kanal-ID oder -Name')
+    p.add_argument('--guild', help='Server-ID oder -Name')
+    p.add_argument('--limit', type=int, default=10 ** 9, help='höchstens so viele (neueste) Nachrichten, Standard alle')
+    p.add_argument('--ext', help='nur Anhänge mit diesen Endungen laden, z.B. png')
+    p.add_argument('--out', help='Zielordner (Standard: downloads/<Kanal-ID>)')
+    p.set_defaults(func=cmd_export)
 
     args = parser.parse_args()
     args.func(args)
