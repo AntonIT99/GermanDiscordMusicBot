@@ -61,5 +61,13 @@ class Config:
         self.__read()
         return self.cp.get('Settings', 'welcome_channel')
 
+    def get_welcome_guilds(self):
+        """Server-IDs, auf denen Begrüßungen aktiv sind (Standard: keine)."""
+        self.__read()
+        if 'welcome_guilds' not in self._cache:
+            raw = self.cp.get('Settings', 'welcome_guilds', fallback='')
+            self._cache['welcome_guilds'] = frozenset(int(s) for s in raw.split(',') if s.strip().isdigit())
+        return self._cache['welcome_guilds']
+
 
 config = Config()

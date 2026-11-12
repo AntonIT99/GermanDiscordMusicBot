@@ -4,6 +4,8 @@ owner_id = 123456789
 command_prefix = +
 music_path = /home/user/Music
 welcome_channel = eingangshalle
+# Kommagetrennte Server-IDs, auf denen Begrüßungen aktiv sind (leer = überall aus)
+welcome_guilds =
 
 [Deploy]
 # Nur für deploy.ps1 auf dem Entwicklungsrechner: wohin deployt wird

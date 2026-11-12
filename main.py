@@ -136,6 +136,8 @@ async def on_command_error(ctx, error):
 
 @bot.event
 async def on_member_update(before, after):
+    if after.guild.id not in config.get_welcome_guilds():
+        return  # Begrüßungen nur auf explizit konfigurierten Servern
     if not after.bot and len(before.roles) == 1 and len(after.roles) > 1:
         # Nicht jeder Server hat den Willkommenskanal
         channel = discord.utils.get(after.guild.text_channels, name=config.get_welcome_channel())
