@@ -5,6 +5,12 @@ command_prefix = +
 music_path = /home/user/Music
 welcome_channel = eingangshalle
 
+[Deploy]
+# Nur für deploy.ps1 auf dem Entwicklungsrechner: wohin deployt wird
+host = pi@pi
+bot_dir = /home/pi/bot
+service = bot
+
 [Language]
 greetings_using = Hallo, Servus, Grüß Gott, Sei gegrüßt, Moin
 greetings_understanding = Hallo, Hi, Servus, Grüß Gott, Hey, Heyho, Guten Tag, Guten Abend, Guten Morgen, Moin, Bonjour, Hello, Hola, Grüezi, Grüß, Sei gegrüßt, Gude
