@@ -1,8 +1,5 @@
 aioconsole
-discord
-PyNaCl
-yt-dlp
-StrEnum
-aiofiles
 discord.py[voice]
 davey
+yt-dlp[default]
+StrEnum

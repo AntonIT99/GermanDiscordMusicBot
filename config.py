@@ -1,17 +1,38 @@
 import configparser
 import os
 
+CONFIG_FILE = 'config.ini'
+
 
 class Config:
+    """
+    Zugriff auf config.ini. Die Datei wird nur neu eingelesen, wenn sie sich geändert hat
+    (Änderungen wirken also weiterhin ohne Neustart), statt bei jedem einzelnen Zugriff.
+    """
+
     def __init__(self):
         self.cp = configparser.ConfigParser()
+        self._mtime = None
+        self._cache = {}
 
     def __read(self):
-        self.cp.read('config.ini')
+        try:
+            mtime = os.stat(CONFIG_FILE).st_mtime_ns
+        except OSError:
+            mtime = 0
+        if mtime != self._mtime:
+            cp = configparser.ConfigParser()
+            cp.read(CONFIG_FILE, encoding='utf-8-sig')
+            self.cp = cp
+            self._mtime = mtime
+            self._cache = {}
 
     def get_language_list(self, key):
         self.__read()
-        return [s.strip() for s in self.cp.get('Language', key).split(',')]
+        cache_key = ('Language', key)
+        if cache_key not in self._cache:
+            self._cache[cache_key] = tuple(s.strip() for s in self.cp.get('Language', key).split(',') if s.strip())
+        return self._cache[cache_key]
 
     def get_command_prefix(self):
         self.__read()
@@ -28,11 +49,13 @@ class Config:
 
     def get_music_path(self):
         self.__read()
-        path = self.cp.get('Settings', 'music_path')
-        if not os.path.exists(path):
-            path = os.getcwd() + os.path.sep + "music"
-            self.cp.set('Settings', 'music_path', path)
-        return path
+        if 'music_path' not in self._cache:
+            path = self.cp.get('Settings', 'music_path', fallback='')
+            if not path or not os.path.isdir(path):
+                path = os.path.join(os.getcwd(), "music")
+                os.makedirs(path, exist_ok=True)
+            self._cache['music_path'] = path
+        return self._cache['music_path']
 
     def get_welcome_channel(self):
         self.__read()

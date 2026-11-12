@@ -1,0 +1,25 @@
+# systemd-Unit für den Bot auf dem Raspberry Pi.
+#
+#   sudo cp bot.service.example /etc/systemd/system/bot.service   (Pfade und User anpassen)
+#   sudo systemctl daemon-reload
+#   sudo systemctl enable --now bot
+#
+[Unit]
+Description=Discord Bot
+# Erst starten, wenn das Netzwerk steht: sonst scheitert der Login direkt nach dem Booten
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=simple
+User=pi
+WorkingDirectory=/home/pi/bot/
+ExecStart=/home/pi/bot/venv/bin/python /home/pi/bot/main.py
+# Nach einem Absturz neu starten. "herunterfahren" beendet den Bot sauber und löst keinen Neustart aus.
+Restart=on-failure
+RestartSec=15
+# Ausgaben sofort ins Journal schreiben (journalctl -u bot)
+Environment=PYTHONUNBUFFERED=1
+
+[Install]
+WantedBy=multi-user.target
