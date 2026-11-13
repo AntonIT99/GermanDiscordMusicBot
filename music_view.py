@@ -9,7 +9,8 @@ from emoji import Emoji
 from helper import print_and_log
 from music_source import MusicError, MusicSource
 
-VOLUME_STEP = 0.2
+VOLUME_STEP = 0.1
+DEFAULT_VOLUME = 0.1  # Standardlautstärke, bis in der Gilde eine andere eingestellt wird
 
 
 class State(Enum):

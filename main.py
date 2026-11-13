@@ -406,7 +406,8 @@ async def admin_console_input_loop():
             else:
                 print_and_log("Eingabe konnte nicht interpretiert werden", logging.ERROR)
         except EOFError:
-            logging.error('EOFError: Eingabe konnte nicht gelesen werden')
+            logging.error('EOFError: Eingabe konnte nicht gelesen werden, Konsole wird beendet')
+            break
 
 
 def is_background_process():

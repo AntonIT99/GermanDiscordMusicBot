@@ -9,7 +9,7 @@ from discord.ext import commands
 from config import config
 from helper import print_and_log, is_valid_url, is_music_file, send_code_block
 from music_source import MusicError, MusicSource
-from music_view import MusicView
+from music_view import MusicView, DEFAULT_VOLUME
 
 VOICE_CONNECT_TIMEOUT = 20
 
@@ -70,7 +70,7 @@ class Musik(commands.Cog):
             if voice_client is not None:
                 # Verbindung ist abgerissen: aufräumen, bevor neu verbunden wird
                 await voice_client.disconnect(force=True)
-            voice_client = await channel.connect(timeout=VOICE_CONNECT_TIMEOUT, reconnect=True, self_deaf=True)
+            voice_client = await channel.connect(timeout=VOICE_CONNECT_TIMEOUT, reconnect=True)
         except (asyncio.TimeoutError, discord.ClientException, discord.HTTPException) as e:
             raise MusicError(f"Sprachkanal {channel.name} konnte nicht betreten werden: {e or type(e).__name__}") from e
         print_and_log("Sprachkanal {} beigetreten".format(channel.name), logging.INFO)
@@ -79,7 +79,7 @@ class Musik(commands.Cog):
     async def _play(self, ctx, name: str, is_url: bool, stream: bool = False):
         async with self.lock(ctx.guild):
             async with ctx.typing():
-                volume = self.volumes.get(ctx.guild.id, 1.0)
+                volume = self.volumes.get(ctx.guild.id, DEFAULT_VOLUME)
                 source = await MusicSource.create(name, is_url, stream, volume, notify=ctx.send)
             view = await MusicView.create(ctx, source, self)
             await view.play()
@@ -107,7 +107,7 @@ class Musik(commands.Cog):
 
     @commands.command()
     @commands.guild_only()
-    async def spielen(self, ctx, *, query):
+    async def abspielen(self, ctx, *, query):
         """Musik aus einer Datei oder einer URL abspielen"""
         if is_valid_url(query):
             await self._play(ctx, query, True, stream=False)
@@ -172,7 +172,7 @@ class Musik(commands.Cog):
             print_and_log(f"Verlassen des Sprachkanals {ctx.voice_client.channel.name}", logging.INFO)
             await ctx.voice_client.disconnect(force=True)
 
-    @spielen.before_invoke
+    @abspielen.before_invoke
     @streamen.before_invoke
     async def ensure_voice_before_playing(self, ctx):
         await self.ensure_voice(ctx.guild, ctx.author)
